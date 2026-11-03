@@ -163,6 +163,16 @@ img, svg { max-width: 100%; }
 .gallery-categories span:last-child { border-right: 0; }
 .gallery-empty { min-height: 420px; display: flex; flex-direction: column; justify-content: flex-end; padding: 70px 0 0; }
 .gallery-empty h2 { max-width: 880px; margin: 0; font: 500 clamp(2rem, 4vw, 4rem)/1.12 var(--serif); letter-spacing: -.04em; }
+.gallery-feature { padding: 72px 0 12px; }
+.gallery-feature > .kicker { text-align: center; margin-bottom: 30px; }
+.gallery-figure { width: min(760px, 100%); margin: 0 auto; }
+.gallery-figure a { display: block; }
+.gallery-figure img { display: block; width: 100%; height: auto; }
+.gallery-figure figcaption { margin-top: 12px; color: var(--soft); font-size: .72rem; line-height: 1.55; text-align: center; }
+.gallery-figure figcaption a { display: inline; text-underline-offset: 3px; }
+.gallery-copy { width: min(760px, 100%); margin: 42px auto 0; }
+.gallery-copy h2 { margin: 0 0 22px; font: 500 clamp(2.2rem, 4.5vw, 4.5rem)/1.05 var(--serif); letter-spacing: -.045em; }
+.gallery-copy p { margin: 0; font: 1.16rem/1.78 var(--serif); }
 .site-footer { padding: 46px 0 54px; background: var(--black); color: var(--white); }
 .footer-inner { display: grid; grid-template-columns: 1fr auto; gap: 35px; align-items: end; }
 .footer-brand { font-size: .83rem; font-weight: 700; letter-spacing: .12em; }
