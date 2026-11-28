@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Histoire de la Médecine — Chronologie interactive (400 av. J.-C. – 2026)</title>
+  
+  <!-- Typographies éditoriales & scientifiques -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Bibliothèque vis-timeline -->
+  <script src="https://unpkg.com/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
+  <link href="https://unpkg.com/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
+  
+  <!-- Exportation haute résolution -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg-canvas: #F8F9FA;
+      --bg-surface: #FFFFFF;
+      --text-primary: #1E242B;
+      --text-secondary: #525E6C;
+      --border-subtle: #E1E5EA;
+      
+      /* Palette des 6 pistes */
+      --track-1: #64748B; /* Histoire humaine - Gris ardoise */
+      --track-2: #4682B4; /* Sciences générales - Bleu acier */
+      --track-3: #1E40AF; /* Concepts & théories - Bleu cobalt */
+      --track-4: #047857; /* Techniques & traitements - Vert émeraude */
+      --track-5: #C2593F; /* Épidémies - Terracotta */
+      --track-6: #6D597A; /* Institutions - Violet sobre */
+      --accent-gold: #C59B27; /* Événements fondateurs ★ */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* EN-TÊTE ÉDITORIAL */
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 1rem 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      z-index: 20;
+    }
+
+    .title-block h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+
+    .title-block p {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      margin-top: 0.15rem;
+    }
+
+    /* BARRE D'OUTILS ET NAVIGATION */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--bg-canvas);
+    }
+
+    button {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    button:last-child {
+      border-right: none;
+    }
+
+    button:hover {
+      background: #EDF1F5;
+    }
+
+    button.active {
+      background: var(--text-primary);
+      color: #FFFFFF;
+    }
+
+    .btn-standalone {
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      background: var(--bg-surface);
+    }
+
+    /* CONTRÔLE DES PISTES & LÉGENDE */
+    .sub-header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.5rem 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.75rem;
+      z-index: 15;
+    }
+
+    .track-toggles {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .track-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: opacity 0.2s;
+    }
+
+    .track-toggle.muted {
+      opacity: 0.4;
+    }
+
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .hierarchy-legend {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .star-badge {
+      color: var(--accent-gold);
+      font-weight: bold;
+    }
+
+    /* ZONE PRINCIPALE DE LA FRISE */
+    #timeline-wrapper {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+      background: var(--bg-canvas);
+    }
+
+    #visualization {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* COUCHE SVG POUR LES CONNEXIONS ÉPISTÉMOLOGIQUES */
+    #relations-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* PERSONNALISATION VIS-TIMELINE */
+    .vis-timeline {
+      border: none !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+
+    .vis-labelset .vis-label {
+      border-bottom: 1px solid var(--border-subtle) !important;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      width: 230px !important;
+    }
+
+    .group-header {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .group-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .group-sub {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+    }
+
+    .vis-foreground .vis-group {
+      border-bottom: 1px solid var(--border-subtle) !important;
+    }
+
+    .vis-time-axis .vis-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    /* BANDES DE CONTEXTE (PISTES 1 & 2) */
+    .vis-item.vis-background.era-human {
+      background-color: rgba(100, 116, 139, 0.12);
+      border-left: 1px dashed rgba(100, 116, 139, 0.45);
+      color: #334155;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 8px;
+    }
+
+    .vis-item.vis-background.era-science {
+      background-color: rgba(70, 130, 180, 0.12);
+      border-left: 1px dashed rgba(70, 130, 180, 0.45);
+      color: #1E3A5F;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 4px 8px;
+    }
+
+    /* HIÉRARCHIE DES ÉVÉNEMENTS (NIVEAUX A, B, C) */
+    .vis-item.vis-box, .vis-item.vis-range {
+      border-radius: 4px;
+      border-width: 1px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .vis-item.vis-box:hover, .vis-item.vis-range:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+      z-index: 10 !important;
+    }
+
+    /* Niveau A : Fondateurs ★ */
+    .vis-item.level-A {
+      background-color: #FFFDF7;
+      border: 1.5px solid var(--accent-gold) !important;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 0.78rem;
+      padding: 2px 6px;
+    }
+
+    .vis-item.level-A .vis-dot {
+      border-color: var(--accent-gold) !important;
+      border-width: 5px !important;
+    }
+
+    /* Niveau B : Intermédiaires */
+    .vis-item.level-B {
+      background-color: var(--bg-surface);
+      font-size: 0.72rem;
+      padding: 1px 5px;
+    }
+
+    .cat-theory { border-color: var(--track-3) !important; color: #1E3A8A; }
+    .cat-tech   { border-color: var(--track-4) !important; color: #064E3B; }
+    .cat-inst   { border-color: var(--track-6) !important; color: #4C1D95; }
+
+    /* Niveau C : Crises sanitaires */
+    .vis-item.level-C {
+      background-color: rgba(194, 89, 63, 0.14);
+      border-color: var(--track-5) !important;
+      color: #7C2D12;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    /* Distinction post-1953 */
+    .vis-item.post-1953 {
+      border-style: dashed !important;
+    }
+
+    /* NOTE MÉTHODOLOGIQUE EN PIED DE PAGE */
+    footer {
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      padding: 0.4rem 1.75rem;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    /* PANNEAU LATÉRAL DE FICHE DÉTAILLÉE */
+    #detail-drawer {
+      position: fixed;
+      top: 0;
+      right: -480px;
+      width: 460px;
+      max-width: 100vw;
+      height: 100vh;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-subtle);
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+      z-index: 100;
+      transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #detail-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .drawer-meta {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 0.4rem;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: #F1F5F9;
+      color: var(--text-primary);
+    }
+
+    .badge-epistemology {
+      background: #FEF3C7;
+      color: #92400E;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+    }
+
+    .drawer-title {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .close-btn {
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+    }
+
+    .drawer-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+
+    .drawer-section h4 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin-bottom: 0.3rem;
+    }
+
+    .drawer-section p {
+      color: var(--text-primary);
+    }
+
+    .limits-box {
+      background: #FFFBEB;
+      border-left: 3px solid #D97706;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0 4px 4px 0;
+      font-size: 0.83rem;
+    }
+
+    .related-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+
+    .related-chip {
+      background: #F1F5F9;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+
+    .related-chip:hover {
+      background: #E2E8F0;
+    }
+
+    .source-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      background: var(--bg-canvas);
+      padding: 0.6rem;
+      border-radius: 4px;
+    }
+    [hidden] { display: none !important; }
+    body { min-height: 100vh; height: auto; overflow: visible; background: #fff; }
+    .back-link { color: inherit; font: .85rem system-ui, sans-serif; text-underline-offset: .22em; }
+    .title-block h1 { font-family: Georgia, serif; text-transform: none; letter-spacing: -.02em; margin-top: .55rem; }
+    #timeline-wrapper { min-height: 32rem; }
+    #visualization { height: auto; }
+    .reading-list { padding: 1rem 1.75rem 1.5rem; }
+    .reading-list summary { cursor: pointer; }
+    .reading-list ol { padding: .6rem 0 0 1.5rem; }
+    .reading-list li + li { margin-top: .55rem; }
+    .timeline-status { padding: 0 1.75rem .5rem; }
+    :focus-visible { outline: 2px solid #111; outline-offset: 2px; }
+    @media (max-width: 650px) {
+      header, .sub-header, footer { padding-left: 1rem; padding-right: 1rem; }
+      .toolbar { width: 100%; }
+      .toolbar .btn-group:first-child { flex-wrap: wrap; }
+      .vis-labelset .vis-label { width: 105px !important; padding: 0 5px; }
+      .group-title { font-size: .63rem; overflow-wrap: anywhere; }
+      .group-sub { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- EN-TÊTE -->
+  <header>
+    <div class="title-block">
+      <a class="back-link" href="./medecine.html">← Médecine</a>
+      <h1>Histoire de la médecine</h1>
+      <p>2 400 ans de découvertes, de paradigmes et de transformations scientifiques.</p>
+    </div>
+
+    <div class="toolbar">
+      <div class="btn-group" aria-label="Navigation par périodes">
+        <button onclick="zoomToRange(-450, 2030, this)" class="active" id="btn-all">Vue globale</button>
+        <button onclick="zoomToRange(-450, 500, this)">Antiquité</button>
+        <button onclick="zoomToRange(476, 1492, this)">Moyen Âge</button>
+        <button onclick="zoomToRange(1450, 1650, this)">Renaissance</button>
+        <button onclick="zoomToRange(1650, 1800, this)">Ép. moderne</button>
+        <button onclick="zoomToRange(1800, 1955, this)">XIXe–1953</button>
+        <button onclick="zoomToRange(1950, 2028, this)">1953–2026</button>
+      </div>
+
+      <div class="btn-group" aria-label="Contrôles de zoom">
+        <button onclick="timeline.zoomIn(0.4)" title="Zoomer">+</button>
+        <button onclick="timeline.zoomOut(0.4)" title="Dézoomer">−</button>
+      </div>
+
+      <button class="btn-standalone" onclick="toggleRelations()" id="btn-relations">Liens historiques : ON</button>
+      <button class="btn-standalone" onclick="toggleFullscreen()">Plein écran</button>
+      <button class="btn-standalone" onclick="exportPNG()">PNG</button>
+      <button class="btn-standalone" onclick="exportPDF()">PDF</button>
+    </div>
+  </header>
+
+  <!-- CONTRÔLE DES 6 PISTES ET HIÉRARCHIE -->
+  <div class="sub-header">
+    <div class="track-toggles" id="track-toggles"></div>
+    <div class="hierarchy-legend">
+      <span class="legend-item"><span class="star-badge">★</span> Niveau A : Jalon fondateur (10)</span>
+      <span class="legend-item">● Niveau B : Jalon intermédiaire</span>
+      <span class="legend-item" style="color: var(--track-5);">▲ Niveau C : Crise sanitaire</span>
+      <span class="legend-item" style="border-bottom: 1px dashed #666;">--- Corpus post-1953 (6)</span>
+    </div>
+  </div>
+
+  <!-- ZONE DE VISUALISATION -->
+  <main id="timeline-wrapper">
+    <svg id="relations-svg"></svg>
+    <div id="visualization"></div>
+  </main>
+
+  <p class="timeline-status" id="timeline-status" role="status"></p>
+  <details class="reading-list" id="reading-list">
+    <summary>Lire les jalons sous forme de liste</summary>
+    <ol id="chronology-list"></ol>
+  </details>
+  <noscript><p>Activez JavaScript pour consulter la chronologie.</p></noscript>
+
+  <!-- NOTE ÉPISTÉMOLOGIQUE -->
+  <footer>
+    <span><strong>Note méthodologique :</strong> Les découpages périodiques (Antiquité, Moyen Âge, etc.) sont des repères conventionnels euro-méditerranéens et non universels. Échelle strictement proportionnelle aux durées réelles.</span>
+    <span>Cliquez sur un jalon pour ouvrir sa fiche documentaire.</span>
+  </footer>
+
+  <!-- FICHE DOCUMENTAIRE LATÉRALE -->
+  <aside id="detail-drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-meta">
+          <span class="badge" id="d-date"></span>
+          <span class="badge" id="d-track"></span>
+          <span class="badge badge-epistemology" id="d-nature"></span>
+        </div>
+        <h2 class="drawer-title" id="d-title"></h2>
+      </div>
+      <button class="close-btn" onclick="closeDrawer()" aria-label="Fermer">×</button>
+    </div>
+    <div class="drawer-body" id="drawer-content"></div>
+  </aside>
+
+  <script>
+    /**
+     * =========================================================================
+     * 1. MODÈLE DE DONNÉES STRUCTURÉES (SÉPARÉ DE L'INTERFACE)
+     * =========================================================================
+     */
+
+    // Helper pour convertir une année (y compris négative av. J.-C.) en objet Date JS valide
+    function makeDate(year, month = 0, day = 1) {
+      const d = new Date(0);
+      d.setFullYear(year, month, day);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    const TRACKS = [
+      { id: 1, label: "1. Histoire humaine", sub: "Périodes conventionnelles", color: "#64748B", visible: true },
+      { id: 2, label: "2. Histoire des sciences", sub: "Cadres épistémiques", color: "#4682B4", visible: true },
+      { id: 3, label: "3. Concepts & théories", sub: "Modèles médicaux", color: "#1E40AF", visible: true },
+      { id: 4, label: "4. Techniques & traitements", sub: "Instruments & thérapeutiques", color: "#047857", visible: true },
+      { id: 5, label: "5. Épidémies & crises", sub: "Crises sanitaires", color: "#C2593F", visible: true },
+      { id: 6, label: "6. Institutions & société", sub: "Pratiques & santé publique", color: "#6D597A", visible: true }
+    ];
+
+    // Bandes de contexte (Pistes 1 et 2)
+    const CONTEXT_BANDS = [
+      // Ligne 1 : Histoire humaine (repères euro-méditerranéens explicités)
+      { id: "h1", group: 1, content: "Antiquité (repère euro-méditerranéen)", start: makeDate(-450), end: makeDate(476), type: "background", className: "era-human" },
+      { id: "h2", group: 1, content: "Moyen Âge (476–1492)", start: makeDate(476), end: makeDate(1492), type: "background", className: "era-human" },
+      { id: "h3", group: 1, content: "Renaissance", start: makeDate(1450), end: makeDate(1600), type: "background", className: "era-human" },
+      { id: "h4", group: 1, content: "Époque moderne (1492–1789)", start: makeDate(1492), end: makeDate(1789), type: "background", className: "era-human" },
+      { id: "h5", group: 1, content: "Époque contemporaine (1789–2026)", start: makeDate(1789), end: makeDate(2027), type: "background", className: "era-human" },
+
+      // Ligne 2 : Histoire générale des sciences
+      { id: "s1", group: 2, content: "Traditions scientifiques antiques", start: makeDate(-450), end: makeDate(500), type: "background", className: "era-science" },
+      { id: "s2", group: 2, content: "Sciences médiévales (monde arabo-persan, Asie, Europe)", start: makeDate(750), end: makeDate(1450), type: "background", className: "era-science" },
+      { id: "s3", group: 2, content: "Renaissance scientifique", start: makeDate(1450), end: makeDate(1600), type: "background", className: "era-science" },
+      { id: "s4", group: 2, content: "Révolution scientifique (XVIe–XVIIe s.)", start: makeDate(1543), end: makeDate(1700), type: "background", className: "era-science" },
+      { id: "s5", group: 2, content: "Méthode expérimentale", start: makeDate(1700), end: makeDate(1850), type: "background", className: "era-science" },
+      { id: "s6", group: 2, content: "Révolutions industrielles", start: makeDate(1780), end: makeDate(1914), type: "background", className: "era-science" },
+      { id: "s7", group: 2, content: "Physique, chimie et biologie modernes", start: makeDate(1895), end: makeDate(1970), type: "background", className: "era-science" },
+      { id: "s8", group: 2, content: "Révolution informatique", start: makeDate(1950), end: makeDate(2000), type: "background", className: "era-science" },
+      { id: "s9", group: 2, content: "Numérique et intelligence artificielle", start: makeDate(2000), end: makeDate(2027), type: "background", className: "era-science" }
+    ];
+
+    // Corpus des 37 jalons obligatoires + 6 repères complémentaires post-1953 (43 entrées)
+    const EVENTS_DATA = [
+      // --- ANTIQUITÉ À 1543 ---
+      {
+        id: "j01", num: 1, founding: true, post1953: false, group: 3, level: "A",
+        dateLabel: "Vers 400 av. J.-C.", start: makeDate(-400),
+        title: "Hippocrate et le Corpus hippocratique",
+        nature: "Changement de cadre conceptuel",
+        peoplePlaces: "Hippocrate de Cos et école de Cos (Grèce antique)",
+        context: "Émergence de la philosophie naturelle grecque cherchant à expliquer les phénomènes sans recourir systématiquement aux interventions divines.",
+        discovery: "Formalisation d'une médecine naturaliste fondée sur l'observation clinique, le pronostic, le régime et la théorie des quatre humeurs.",
+        impact: "Séparation méthodologique entre médecine et pratiques magico-religieuses ; fondation de l'éthique médicale occidentale.",
+        limits: "La théorie humorale reposait sur des spéculations physiologiques erronées qui ont freiné certaines recherches anatomiques pendant des siècles.",
+        sources: "Corpus hippocratique (Ve–IVe s. av. J.-C.), notamment 'De la maladie sacrée' et 'Épidémies'.",
+        related: ["j02", "j03"]
+      },
+      {
+        id: "j02", num: 2, founding: false, post1953: false, group: 3, level: "B",
+        dateLabel: "IIe siècle (v. 129–216)", start: makeDate(170),
+        title: "Galien de Pergame",
+        nature: "Systématisation théorique",
+        peoplePlaces: "Claude Galien (Pergame, Alexandrie, Rome)",
+        context: "Empire romain ; interdiction de la dissection humaine, obligeant à recourir à l'anatomie comparée animale (singes, porcs).",
+        discovery: "Synthèse monumentale de l'anatomie, de la physiologie et de la pharmacopée antiques ; démonstration que les artères contiennent du sang et non de l'air.",
+        impact: "Autorité médicale dominante en Europe et dans le monde méditerranéen pendant plus de treize siècles.",
+        limits: "Transposition abusive de structures anatomiques animales à l'humain (ex. rete mirabile, pores interventriculaires du cœur).",
+        sources: "Galien, 'De usu partium' (De l'utilité des parties) et 'Methodus medendi'.",
+        related: ["j01", "j03", "j05", "j09"]
+      },
+      {
+        id: "j03", num: 3, founding: false, post1953: false, group: 6, level: "B",
+        dateLabel: "Vers 1025", start: makeDate(1025),
+        title: "Avicenne — Le Canon de la médecine",
+        nature: "Synthèse encyclopédique & pédagogique",
+        peoplePlaces: "Ibn Sīnā / Avicenne (Boukhara, Hamadan — Perse)",
+        context: "Âge d'or des sciences arabo-persanes ; développement des hôpitaux (bimaristans) et traduction des textes grecs, persans et indiens.",
+        discovery: "Rédaction d'Al-Qānūn fī al-ṭibb (Canon de la médecine), classant méthodiquement pathologies, pharmacopée et règles d'évaluation des remèdes.",
+        impact: "Ouvrage de référence majeur dans le monde islamique puis dans les universités européennes médiévales jusqu'au XVIIe siècle.",
+        limits: "S'inscrit dans la continuité du cadre humoral galénique tout en l'enrichissant d'observations cliniques originales.",
+        sources: "Ibn Sīnā, 'Al-Qānūn fī al-ṭibb' (v. 1025), traduction latine par Gérard de Crémone (XIIe s.).",
+        related: ["j02", "j05"]
+      },
+      {
+        id: "j04", num: 4, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1347–1353", start: makeDate(1347), end: makeDate(1353),
+        title: "Peste noire",
+        nature: "Crise sanitaire pandémique",
+        peoplePlaces: "Eurasie et Afrique du Nord (de l'Asie centrale au bassin méditerranéen)",
+        context: "Intensification des routes commerciales terrestres et maritimes ; vulnérabilité démographique et absence de compréhension des agents infectieux.",
+        discovery: "Pandémie causée par le bacille Yersinia pestis (identifié en 1894), entraînant la perte estimée de 30 à 50 % de la population européenne.",
+        impact: "Mise en place progressive des premiers dispositifs administratifs de santé publique : quarantaines portuaires (Raguse, 1377) et bureaux de santé.",
+        limits: "Interprétations contemporaines dominées par la théorie des miasmes et des causes astrales ; violences contre des minorités.",
+        sources: "Chroniques médiévales ; travaux paléogénétiques modernes confirmant Yersinia pestis (Bos et al., Nature, 2011).",
+        related: ["j06", "j10"]
+      },
+      {
+        id: "j05", num: 5, founding: true, post1953: false, group: 3, level: "A",
+        dateLabel: "1543", start: makeDate(1543),
+        title: "André Vésale — Fabrica",
+        nature: "Découverte & refondation méthodologique",
+        peoplePlaces: "André Vésale (Université de Padoue, Venise, Bâle)",
+        context: "Renaissance humaniste ; reprise des dissections humaines publiques et essor de l'imprimerie et de la gravure anatomique.",
+        discovery: "Publication de 'De humani corporis fabrica', corrigeant plus de 200 erreurs anatomiques de Galien par l'observation directe du cadavre humain.",
+        impact: "Fonde l'anatomie moderne sur l'autopsie (voir par soi-même) plutôt que sur l'autorité textuelle.",
+        limits: "Révolutionne l'anatomie descriptive mais ne remet pas encore en cause la physiologie humorale galénique.",
+        sources: "Andreas Vesalius, 'De humani corporis fabrica libri septem', Bâle, 1543.",
+        related: ["j02", "j09"]
+      },
+
+      // --- 1543 À 1628 ---
+      {
+        id: "j06", num: 6, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1575–1577", start: makeDate(1575), end: makeDate(1577),
+        title: "Épidémies de peste en Italie",
+        nature: "Crise sanitaire",
+        peoplePlaces: "Venise, Milan, Padoue et nord de l'Italie",
+        context: "Villes marchandes densément peuplées dotées de magistratures sanitaires permanentes.",
+        discovery: "Flambées épidémiques majeures mobilisant lazarets, cordons sanitaires, recensements des décès et débats médicaux sur la contagion.",
+        impact: "Renforcement de l'administration sanitaire urbaine et des registres de mortalité en Italie du Nord.",
+        limits: "Tensions fortes entre impératifs économiques commerciaux et mesures d'isolement sanitaire.",
+        sources: "Archives des Provveditori alla Sanità de Venise ; traités de Girolamo Mercuriale (1577).",
+        related: ["j04", "j10"]
+      },
+      {
+        id: "j07", num: 7, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "Vers 1590", start: makeDate(1590),
+        title: "Premiers microscopes composés",
+        nature: "Invention technique",
+        peoplePlaces: "Middelbourg (Provinces-Unies) — Hans & Zacharias Janssen, Hans Lippershey",
+        context: "Essor de l'optique et du polissage des lentilles aux Pays-Bas à la fin du XVIe siècle.",
+        discovery: "Assemblage de plusieurs lentilles dans un tube permettant d'augmenter le grossissement optique des petits objets.",
+        impact: "Ouvre la voie à l'exploration de l'infiniment petit en biologie et en médecine au XVIIe siècle (Hooke, Malpighi, Leeuwenhoek).",
+        limits: "L'attribution exacte demeure débattue par les historiens ; fortes aberrations chromatiques limitant les premiers instruments.",
+        sources: "P. Borellus, 'De vero telescopii inventore' (1655) ; études d'histoire de l'optique (Turner).",
+        related: ["j11"]
+      },
+      {
+        id: "j08", num: 8, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1614", start: makeDate(1614),
+        title: "Santorio Santorio et la mesure physiologique",
+        nature: "Invention technique & méthode quantitative",
+        peoplePlaces: "Santorio Santorio (Venise, Université de Padoue)",
+        context: "Influence de Galilée et de l'iatromécanique à Padoue : appliquer la mesure mathématique aux phénomènes vitaux.",
+        discovery: "Publication de 'De statica medicina' : suivi quantitatif sur trente ans des variations du poids corporel via une chaise-balance.",
+        impact: "Introduit la métrologie quantitative dans l'étude du métabolisme et de la transpiration insensible.",
+        limits: "Interprétation encore inscrite dans l'équilibre des humeurs et des six choses non naturelles.",
+        sources: "Santorio Santorio, 'Ars de statica medicina', Venise, 1614.",
+        related: ["j09"]
+      },
+      {
+        id: "j09", num: 9, founding: true, post1953: false, group: 3, level: "A",
+        dateLabel: "1628", start: makeDate(1628),
+        title: "William Harvey — Circulation sanguine",
+        nature: "Découverte scientifique & physiologique",
+        peoplePlaces: "William Harvey (Londres, formation à Padoue)",
+        context: "Révolution scientifique du XVIIe siècle ; travaux antérieurs sur les valvules veineuses (Fabrizi d'Acquapendente) et la petite circulation (Ibn al-Nafis, Servet).",
+        discovery: "Démonstration expérimentale et quantitative (Exercitatio anatomica de motu cordis) de la circulation systémique continue du sang propulsé par le cœur.",
+        impact: "Renverse la physiologie galénique du flux et reflux sanguin et fonde la physiologie expérimentale moderne.",
+        limits: "Ne disposant pas de microscope, Harvey postule l'existence des capillaires sans pouvoir les observer (confirmés par Malpighi en 1661).",
+        sources: "William Harvey, 'Exercitatio anatomica de motu cordis et sanguinis in animalibus', Francfort, 1628.",
+        related: ["j02", "j05", "j08", "j11"]
+      },
+
+      // --- 1628 À 1796 ---
+      {
+        id: "j10", num: 10, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1665", start: makeDate(1665),
+        title: "Grande peste de Londres",
+        nature: "Crise sanitaire",
+        peoplePlaces: "Londres (Angleterre)",
+        context: "Dernière grande flambée de peste bubonique en Angleterre, faisant environ 100 000 victimes.",
+        discovery: "Exploitation systématique des 'Bills of Mortality' (bulletins hebdomadaires de mortalité) par John Graunt et William Petty.",
+        impact: "Essor de la démographie médicale et de l'arithmétique politique appliquée à la surveillance épidémiologique.",
+        limits: "Absence de traitement curatif et persistance des théories miasmatiques.",
+        sources: "John Graunt, 'Natural and Political Observations Made upon the Bills of Mortality' (1662/1665).",
+        related: ["j04", "j06", "j18"]
+      },
+      {
+        id: "j11", num: 11, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1674–1683", start: makeDate(1674), end: makeDate(1683),
+        title: "Antoni van Leeuwenhoek et les « animalcules »",
+        nature: "Découverte scientifique & prouesse technique",
+        peoplePlaces: "Antoni van Leeuwenhoek (Delft, Provinces-Unies)",
+        context: "Correspondance scientifique avec la Royal Society de Londres.",
+        discovery: "Observation au microscope simple à très fort grossissement des protozoaires (1674), des spermatozoïdes (1677) et des bactéries (1683).",
+        impact: "Révèle pour la première fois l'existence d'un monde microbien invisible à l'œil nu.",
+        limits: "Aucun lien causal n'est alors établi entre ces microorganismes et les maladies infectieuses.",
+        sources: "Lettres d'Antoni van Leeuwenhoek publiées dans les 'Philosophical Transactions of the Royal Society' (1674–1684).",
+        related: ["j07", "j21"]
+      },
+      {
+        id: "j12", num: 12, founding: false, post1953: false, group: 6, level: "B",
+        dateLabel: "1747", start: makeDate(1747),
+        title: "James Lind — Expérience sur le scorbut",
+        nature: "Innovation méthodologique clinique",
+        peoplePlaces: "James Lind (à bord du HMS Salisbury, Royal Navy)",
+        context: "Mortalité massive des marins au long cours due au scorbut (carence en vitamine C, alors inconnue).",
+        discovery: "Réalisation d'un essai comparatif contrôlé sur 12 marins répartis en 6 paires recevant différents régimes ; guérison rapide avec oranges et citrons.",
+        impact: "Jalon fondateur de la comparaison clinique contrôlée et de la prévention nutritionnelle navale.",
+        limits: "Échantillon très restreint ; adoption officielle du jus de citron par l'Amirauté britannique seulement en 1795.",
+        sources: "James Lind, 'A Treatise of the Scurvy', Édimbourg, 1753.",
+        related: ["j33"]
+      },
+      {
+        id: "j13", num: 13, founding: true, post1953: false, group: 4, level: "A",
+        dateLabel: "1796", start: makeDate(1796),
+        title: "Edward Jenner — Vaccination antivariolique",
+        nature: "Innovation thérapeutique & préventive",
+        peoplePlaces: "Edward Jenner (Berkeley, Gloucestershire, Angleterre)",
+        context: "La variole est l'une des principales causes de mortalité ; la variolisation (importée de l'Empire ottoman via Lady Montagu) comporte des risques importants.",
+        discovery: "Inoculation du virus de la vaccine (cowpox) à James Phipps, conférant une immunité protectrice contre la variole humaine sans provoquer la maladie grave.",
+        impact: "Naissance de la vaccination moderne, conduisant à terme à l'éradication mondiale de la variole déclarée par l'OMS en 1980.",
+        limits: "Mécanisme immunologique et nature virale totalement inconnus à l'époque ; fortes résistances sociales et médicales initiales.",
+        sources: "Edward Jenner, 'An Inquiry into the Causes and Effects of the Variolae Vaccinae', Londres, 1798.",
+        related: ["j21"]
+      },
+
+      // --- 1796 À 1847 ---
+      {
+        id: "j14", num: 14, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1816", start: makeDate(1816),
+        title: "René Laennec — Invention du stéthoscope",
+        nature: "Invention technique",
+        peoplePlaces: "René-Théophile-Hyacinthe Laennec (Hôpital Necker, Paris)",
+        context: "École anatomo-clinique de Paris (Corvisart, Bichat) : corréler les signes observés sur le vivant aux lésions constatées à l'autopsie.",
+        discovery: "Invention de l'auscultation médiate à l'aide d'un cylindre de bois (le stéthoscope) et description précise des bruits thoraciques et cardiaques.",
+        impact: "Transforme l'examen clinique physique et fonde la sémiologie cardio-respiratoire moderne.",
+        limits: "Accueil initial mitigé hors de France avant sa diffusion internationale au XIXe siècle.",
+        sources: "René Laennec, 'De l'auscultation médiate', Paris, 1819.",
+        related: ["j25"]
+      },
+      {
+        id: "j15", num: 15, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1817 (1817–1824)", start: makeDate(1817), end: makeDate(1824),
+        title: "Première pandémie de choléra",
+        nature: "Crise sanitaire pandémique",
+        peoplePlaces: "Delta du Gange (Bengale, Inde) puis Asie, Moyen-Orient et Afrique orientale",
+        context: "Expansion des échanges coloniaux et mouvements de troupes favorisant la diffusion hors de son foyer endémique bengali.",
+        discovery: "Première diffusion pandémique documentée du choléra (Vibrio cholerae), inaugurent six autres pandémies aux XIXe et XXe siècles.",
+        impact: "Provoque un choc sanitaire mondial qui stimulera la création des conférences sanitaires internationales (à partir de 1851).",
+        limits: "Étiologie alors attribuée aux miasmes ou aux conditions climatiques.",
+        sources: "Rapports médicaux britanniques au Bengale (James Jameson, 1820) ; histoires des pandémies (Pollitzer, OMS).",
+        related: ["j18", "j32"]
+      },
+      {
+        id: "j16", num: 16, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1846", start: makeDate(1846),
+        title: "Anesthésie chirurgicale à l'éther",
+        nature: "Innovation thérapeutique",
+        peoplePlaces: "William T. G. Morton et John Collins Warren (Massachusetts General Hospital, Boston)",
+        context: "Chirurgie limitée par la douleur atroce et le choc opératoire ; expériences antérieures de Crawford Long (1842) et Horace Wells (protoxyde d'azote).",
+        discovery: "Démonstration publique réussie de l'inhalation d'éther sulfurique pour l'exérèse indolore d'une tumeur cervicale (16 octobre 1846).",
+        impact: "Permet le développement d'une chirurgie longue, précise et invasive.",
+        limits: "Sans asepsie ni antisepsie, l'augmentation des opérations entraîne d'abord une hausse de la mortalité infectieuse post-opératoire.",
+        sources: "Henry Jacob Bigelow, 'Insensibility during Surgical Operations Produced by Inhalation', Boston Medical and Surgical Journal, nov. 1846.",
+        related: ["j17", "j22"]
+      },
+      {
+        id: "j17", num: 17, founding: true, post1953: false, group: 6, level: "A",
+        dateLabel: "1847", start: makeDate(1847),
+        title: "Ignaz Semmelweis — Désinfection des mains",
+        nature: "Innovation préventive & pratique clinique",
+        peoplePlaces: "Ignaz Philipp Semmelweis (Hôpital général de Vienne)",
+        context: "Mortalité élevée par fièvre puerpérale dans les maternités hospitalières, nettement supérieure dans la clinique des médecins pratiquant des autopsies.",
+        discovery: "Imposition du lavage des mains au chlorure de chaux avant l'examen des parturientes, faisant chuter la mortalité de plus de 10 % à moins de 2 %.",
+        impact: "Démonstration empirique majeure de la transmission iatrogène des infections et fondement de l'hygiène hospitalière.",
+        limits: "Rejeté par une grande partie de l'establishment médical viennois faute d'explication microbiologique (antérieure aux travaux de Pasteur).",
+        sources: "Ignaz Semmelweis, 'Die Aetiologie, der Begriff und die Prophylaxis des Kindbettfiebers', 1861.",
+        related: ["j16", "j21", "j22"]
+      },
+
+      // --- 1847 AUX ANNÉES 1860 ---
+      {
+        id: "j18", num: 18, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1854", start: makeDate(1854),
+        title: "John Snow et le choléra de Londres",
+        nature: "Investigation épidémiologique",
+        peoplePlaces: "John Snow et Henry Whitehead (quartier de Soho, Londres)",
+        context: "Troisième pandémie de choléra frappant Londres ; hégémonie de la théorie des miasmes (air vicié).",
+        discovery: "Cartographie spatiale des décès et enquête comparative démontrant la transmission hydrique du choléra via la pompe de Broad Street.",
+        impact: "Jalon fondateur de l'épidémiologie moderne et de l'analyse spatiale en santé publique.",
+        limits: "Le vibrion cholérique avait été observé la même année par Filippo Pacini en Italie, mais resta largement ignoré jusqu'à Robert Koch en 1883.",
+        sources: "John Snow, 'On the Mode of Communication of Cholera', 2e éd., Londres, 1855.",
+        related: ["j10", "j15", "j21"]
+      },
+      {
+        id: "j19", num: 19, founding: false, post1953: false, group: 6, level: "B",
+        dateLabel: "1854–1856", start: makeDate(1854), end: makeDate(1856),
+        title: "Florence Nightingale — Réforme hospitalière",
+        nature: "Transformation institutionnelle",
+        peoplePlaces: "Florence Nightingale (Scutari, guerre de Crimée, puis Londres)",
+        context: "Mortalité catastrophique des soldats blessés due aux conditions insalubres des hôpitaux militaires.",
+        discovery: "Réorganisation de l'hygiène, de la ventilation, des soins infirmiers et utilisation novatrice de graphiques statistiques (diagrammes polaires).",
+        impact: "Professionnalisation des soins infirmiers modernes (école St Thomas, 1860) et réforme de l'architecture hospitalière.",
+        limits: "Nightingale demeurait attachée à une conception environnementale/miasmatique plutôt que contagionniste.",
+        sources: "Florence Nightingale, 'Notes on Matters Affecting the Health, Efficiency, and Hospital Administration of the British Army', 1858.",
+        related: ["j17"]
+      },
+      {
+        id: "j20", num: 20, founding: false, post1953: false, group: 3, level: "B",
+        dateLabel: "1858", start: makeDate(1858),
+        title: "Rudolf Virchow — Pathologie cellulaire",
+        nature: "Théorie scientifique",
+        peoplePlaces: "Rudolf Virchow (Berlin, Allemagne)",
+        context: "Formulation de la théorie cellulaire par Schleiden et Schwann (1838–1839).",
+        discovery: "Publication de 'Die Cellularpathologie' : toute cellule provient d'une autre cellule ('Omnis cellula e cellula') et toute maladie résulte d'une altération cellulaire.",
+        impact: "Achève de supplanter la théorie humorale antique et fonde l'anatomopathologie microscopique moderne.",
+        limits: "Virchow se montra initialement sceptique envers le rôle exclusif des microbes exogènes dans l'étiologie des maladies.",
+        sources: "Rudolf Virchow, 'Die Cellularpathologie in ihrer Begründung auf physiologische und pathologische Gewebelehre', Berlin, 1858.",
+        related: ["j07", "j21"]
+      },
+      {
+        id: "j21", num: 21, founding: true, post1953: false, group: 3, level: "A",
+        dateLabel: "Années 1860–1880", start: makeDate(1860), end: makeDate(1884),
+        title: "Louis Pasteur et Robert Koch — Théorie microbienne",
+        nature: "Changement de cadre conceptuel majeur",
+        peoplePlaces: "Louis Pasteur (Paris) et Robert Koch (Wollstein, Berlin)",
+        context: "Débats sur la génération spontanée et recherche des causes spécifiques des maladies infectieuses.",
+        discovery: "Réfutation de la génération spontanée (1861), rôle des microorganismes dans les fermentations et maladies, postulats de Koch (1884) et vaccins atténués (charbon, rage).",
+        impact: "Établit la causalité microbienne spécifique des maladies infectieuses et transforme l'hygiène, la chirurgie et la prévention.",
+        limits: "Risque d'un réductionnisme monocausal négligeant parfois le terrain de l'hôte et les déterminants sociaux de la santé.",
+        sources: "L. Pasteur, 'Mémoire sur les corpuscules organisés...' (1861) ; R. Koch, 'Die Aetiologie der Tuberkulose' (1882/1884).",
+        related: ["j11", "j13", "j17", "j22", "j23"]
+      },
+
+      // --- ANNÉES 1860 À 1895 ---
+      {
+        id: "j22", num: 22, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1867", start: makeDate(1867),
+        title: "Joseph Lister — Antisepsie chirurgicale",
+        nature: "Innovation thérapeutique & technique",
+        peoplePlaces: "Joseph Lister (Glasgow Royal Infirmary, Écosse)",
+        context: "Gangrène gazeuse et septicémie tuant près de la moitié des opérés après amputation.",
+        discovery: "Application des travaux de Pasteur à la chirurgie par l'utilisation de l'acide phénique (phénol) sur les plaies, instruments et pansements.",
+        impact: "Effondrement de la mortalité infectieuse post-opératoire et ouverture de la chirurgie cavitaire (abdominale, thoracique, crânienne).",
+        limits: "Toxicité irritante de l'acide phénique, progressivement remplacée à partir des années 1880 par l'asepsie thermique (stérilisation).",
+        sources: "Joseph Lister, 'On the Antiseptic Principle in the Practice of Surgery', The Lancet, 21 sept. 1867.",
+        related: ["j16", "j17", "j21"]
+      },
+      {
+        id: "j23", num: 23, founding: false, post1953: false, group: 3, level: "B",
+        dateLabel: "1882", start: makeDate(1882),
+        title: "Robert Koch — Bacille de la tuberculose",
+        nature: "Découverte scientifique",
+        peoplePlaces: "Robert Koch (Berlin, Allemagne)",
+        context: "La tuberculose (« phtisie ») est la première cause de mortalité urbaine en Europe au XIXe siècle, souvent considérée comme héréditaire.",
+        discovery: "Isolement, coloration spécifique et culture de Mycobacterium tuberculosis, démontrant son rôle causal.",
+        impact: "Confirmation éclatante de la bactériologie médicale ; prix Nobel de physiologie ou médecine en 1905.",
+        limits: "L'annonce prématurée par Koch de la tuberculine comme remède curatif (1890) fut un échec thérapeutique (utile seulement pour le diagnostic).",
+        sources: "Robert Koch, 'Die Aetiologie der Tuberkulose', Berliner Klinische Wochenschrift, 10 avril 1882.",
+        related: ["j21", "j33"]
+      },
+      {
+        id: "j24", num: 24, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1889–1890", start: makeDate(1889), end: makeDate(1890),
+        title: "Pandémie de grippe dite « russe »",
+        nature: "Crise sanitaire pandémique",
+        peoplePlaces: "Diffusion mondiale depuis l'Empire russe via les réseaux ferroviaires et maritimes",
+        context: "Première pandémie respiratoire à l'ère de la presse télégraphique et de la bactériologie naissante.",
+        discovery: "Propagation rapide à l'échelle mondiale causant environ 1 million de décès.",
+        impact: "Stimule la surveillance épidémiologique internationale et la recherche sur les agents respiratoires.",
+        limits: "L'agent étiologique exact reste discuté aujourd'hui (virus grippal H3N8/H2N2 ou coronavirus humain OC43).",
+        sources: "Rapports sanitaires européens (1889–1890) ; Vijgen et al., Journal of Virology (2005).",
+        related: ["j27", "j42"]
+      },
+      {
+        id: "j25", num: 25, founding: true, post1953: false, group: 4, level: "A",
+        dateLabel: "1895", start: makeDate(1895),
+        title: "Wilhelm Röntgen — Découverte des rayons X",
+        nature: "Découverte physique & invention diagnostique",
+        peoplePlaces: "Wilhelm Conrad Röntgen (Université de Wurtzbourg, Allemagne)",
+        context: "Étude des décharges électriques dans les tubes à vide (tubes de Crookes).",
+        discovery: "Identification d'un rayonnement pénétrant inconnu capable de traverser les tissus mous et d'impressionner une plaque photographique (radiographie de la main d'Anna Bertha Röntgen).",
+        impact: "Permet pour la première fois de visualiser l'intérieur du corps humain vivant sans chirurgie ; fonde la radiologie et la radiothérapie.",
+        limits: "Méconnaissance initiale des effets biologiques des rayonnements ionisants, entraînant de graves radiodermites et cancers chez les pionniers.",
+        sources: "Wilhelm C. Röntgen, 'Über eine neue Art von Strahlen', Sitzungsberichte der Physikalisch-Medizinischen Gesellschaft zu Würzburg, déc. 1895.",
+        related: ["j14"]
+      },
+
+      // --- 1895 À 1928 ---
+      {
+        id: "j26", num: 26, founding: false, post1953: false, group: 3, level: "B",
+        dateLabel: "1901", start: makeDate(1901),
+        title: "Karl Landsteiner — Groupes sanguins ABO",
+        nature: "Découverte scientifique",
+        peoplePlaces: "Karl Landsteiner (Vienne, Autriche)",
+        context: "Les transfusions sanguines étaient jusqu'alors imprévisibles et fréquemment mortelles en raison de réactions hémolytiques.",
+        discovery: "Mise en évidence des réactions d'isoagglutination permettant de classer le sang humain en groupes (A, B, C/O, puis AB en 1902).",
+        impact: "Rend possible la transfusion sanguine sécurisée, essentielle à la chirurgie majeure et à la médecine d'urgence.",
+        limits: "La découverte du facteur Rhésus n'interviendra qu'en 1940 (Landsteiner et Wiener).",
+        sources: "Karl Landsteiner, 'Über Agglutinationserscheinungen normalen menschlichen Blutes', Wiener Klinische Wochenschrift, 1901.",
+        related: ["j16"]
+      },
+      {
+        id: "j27", num: 27, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1918–1919", start: makeDate(1918), end: makeDate(1919),
+        title: "Pandémie de grippe H1N1 (1918–1919)",
+        nature: "Crise sanitaire pandémique",
+        peoplePlaces: "Monde entier (contexte de la fin de la Première Guerre mondiale)",
+        context: "Brassages massifs de populations militaires et civiles ; censure de guerre retardant l'information sanitaire (d'où le surnom impropre de « grippe espagnole »).",
+        discovery: "Pandémie causée par un virus Influenza A (H1N1), touchant particulièrement les jeunes adultes et causant 50 à 100 millions de morts.",
+        impact: "Accélère la structuration des ministères de la Santé et la recherche virologique.",
+        limits: "Les virus grippaux ne seront isolés chez l'humain qu'en 1933 (Smith, Andrewes et Laidlaw).",
+        sources: "Taubenberger & Morens, '1918 Influenza: the Mother of All Pandemics', Emerging Infectious Diseases, 2006.",
+        related: ["j24", "j42"]
+      },
+      {
+        id: "j28", num: 28, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1921–1922", start: makeDate(1921), end: makeDate(1922),
+        title: "Découverte et utilisation clinique de l'insuline",
+        nature: "Découverte scientifique & innovation thérapeutique",
+        peoplePlaces: "Frederick Banting, Charles Best, John Macleod et James Collip (Université de Toronto, Canada)",
+        context: "Le diabète de type 1 était une maladie systématiquement mortelle en quelques mois ou années, traitée uniquement par des régimes de famine.",
+        discovery: "Extraction et purification de l'hormone pancréatique (insuline) ; première injection thérapeutique réussie chez Leonard Thompson en janvier 1922.",
+        impact: "Transforme une pathologie aiguë fatale en maladie chronique contrôlable ; modèle pour l'endocrinologie thérapeutique.",
+        limits: "Premières préparations animales d'origine bovine ou porcine parfois allergisantes ; insuline recombinante humaine produite seulement en 1978–1982.",
+        sources: "Banting, Best, Collip, Campbell & Fletcher, 'Pancreatic Extracts in the Treatment of Diabetes Mellitus', Canadian Medical Association Journal, mars 1922.",
+        related: ["j34"]
+      },
+      {
+        id: "j29", num: 29, founding: true, post1953: false, group: 4, level: "A",
+        dateLabel: "1928", start: makeDate(1928),
+        title: "Alexander Fleming — Découverte de la pénicilline",
+        nature: "Découverte scientifique",
+        peoplePlaces: "Alexander Fleming (St Mary's Hospital, Londres)",
+        context: "Recherche d'agents antibactériens non toxiques pour les leucocytes humains (après la découverte du lysozyme en 1922).",
+        discovery: "Observation de l'inhibition de colonies de Staphylococcus aureus autour d'une moisissure contaminante, Penicillium notatum.",
+        impact: "Identifie le premier antibiotique naturel majeur, ouvrant l'ère de l'antibiothérapie.",
+        limits: "Fleming ne parvient pas à stabiliser ni purifier suffisamment la molécule pour un usage systémique humain ; l'exploitation clinique attendra 1941.",
+        sources: "Alexander Fleming, 'On the Antibacterial Action of Cultures of a Penicillium', British Journal of Experimental Pathology, juin 1929.",
+        related: ["j21", "j30", "j31"]
+      },
+
+      // --- 1928 À 1948 ---
+      {
+        id: "j30", num: 30, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1935", start: makeDate(1935),
+        title: "Sulfamides (Prontosil)",
+        nature: "Innovation thérapeutique",
+        peoplePlaces: "Gerhard Domagk et équipe (laboratoires Bayer, Elberfeld, Allemagne)",
+        context: "Chimiothérapie anti-infectieuse initiée par Paul Ehrlich (Salvarsan, 1910).",
+        discovery: "Démonstration de l'efficacité antibactérienne systémique du Prontosil contre les infections streptococciques (notamment la fièvre puerpérale).",
+        impact: "Premiers antibactériens synthétiques largement utilisés en clinique avant l'arrivée industrielle de la pénicilline.",
+        limits: "Spectre d'action limité et émergence rapide de résistances bactériennes.",
+        sources: "Gerhard Domagk, 'Ein Beitrag zur Chemotherapie der bakteriellen Infektionen', Deutsche Medizinische Wochenschrift, fév. 1935.",
+        related: ["j29", "j31"]
+      },
+      {
+        id: "j31", num: 31, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1941", start: makeDate(1941),
+        title: "Utilisation thérapeutique de la pénicilline",
+        nature: "Innovation thérapeutique & industrielle",
+        peoplePlaces: "Howard Florey, Ernst Chain, Norman Heatley (Oxford, puis production aux États-Unis)",
+        context: "Seconde Guerre mondiale ; besoin urgent de traiter les infections des blessés de guerre.",
+        discovery: "Purification, standardisation et premiers essais cliniques de la pénicilline (1941), suivis de sa production de masse par fermentation profonde.",
+        impact: "Chute spectaculaire de la mortalité due aux pneumonies, septicémies, méningites bactériennes et infections de plaies.",
+        limits: "Sélection rapide de souches résistantes (staphylocoques producteurs de pénicillinase signalés dès les années 1940).",
+        sources: "Abraham, Chain, Fletcher, Florey, Gardner, Heatley & Jennings, 'Further Observations on Penicillin', The Lancet, août 1941.",
+        related: ["j29", "j30"]
+      },
+      {
+        id: "j32", num: 32, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1947", start: makeDate(1947),
+        title: "Épidémie de choléra en Égypte",
+        nature: "Crise sanitaire",
+        peoplePlaces: "Égypte (delta du Nil et Le Caire)",
+        context: "Après-guerre et création de la Commission intérimaire de l'Organisation mondiale de la santé (OMS).",
+        discovery: "Flambée brutale causant plus de 20 000 décès en quelques mois, maîtrisée par une mobilisation sanitaire internationale et une vaccination de masse.",
+        impact: "Accélère la ratification de la Constitution de l'OMS (entrée en vigueur en avril 1948) et la coordination épidémiologique mondiale.",
+        limits: "Efficacité limitée des anciens vaccins anticholériques injectables par rapport à l'accès à l'eau potable et à la réhydratation orale (développée plus tard).",
+        sources: "Archives de l'Organisation mondiale de la santé (Chronique de l'OMS, 1947–1948).",
+        related: ["j15"]
+      },
+      {
+        id: "j33", num: 33, founding: true, post1953: false, group: 6, level: "A",
+        dateLabel: "1948", start: makeDate(1948),
+        title: "Essai randomisé sur la streptomycine",
+        nature: "Innovation méthodologique & institutionnelle",
+        peoplePlaces: "Austin Bradford Hill, Philip D'Arcy Hart et Medical Research Council (Royaume-Uni)",
+        context: "Pénurie de streptomycine (découverte par Schatz et Waksman en 1943) imposant une allocation rigoureuse et éthique pour évaluer son efficacité dans la tuberculose pulmonaire.",
+        discovery: "Premier essai clinique randomisé moderne avec tirage au sort strict (nombres aléatoires), groupe témoin et évaluation radiologique en aveugle.",
+        impact: "Établit le standard méthodologique de l'évaluation thérapeutique moderne (distinct de la formalisation ultérieure de l'EBM dans les années 1990).",
+        limits: "Révèle aussi l'apparition rapide d'une résistance de Mycobacterium tuberculosis à la streptomycine en monothérapie.",
+        sources: "Medical Research Council, 'Streptomycin Treatment of Pulmonary Tuberculosis', British Medical Journal, 30 oct. 1948.",
+        related: ["j12", "j23", "j41"]
+      },
+
+      // --- 1948 À 1953 ---
+      {
+        id: "j34", num: 34, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1949", start: makeDate(1949),
+        title: "Cortisone dans la polyarthrite rhumatoïde",
+        nature: "Innovation thérapeutique",
+        peoplePlaces: "Philip Hench, Edward Kendall et Tadeusz Reichstein (Mayo Clinic, Rochester, États-Unis)",
+        context: "Observation clinique par Hench de la rémission de la polyarthrite rhumatoïde pendant la grossesse ou l'ictère.",
+        discovery: "Administration de corticostéroïdes (composé E / cortisone) produisant une amélioration spectaculaire des symptômes inflammatoires.",
+        impact: "Inaugure la corticothérapie en immunologie, rhumatologie, pneumologie et médecine interne.",
+        limits: "Effets indésirables métaboliques, osseux et immunodépresseurs majeurs en traitement prolongé.",
+        sources: "Hench, Kendall, Slocumb & Polley, 'The Effect of a Hormone of the Adrenal Cortex... on Rheumatoid Arthritis', Proceedings of the Staff Meetings of the Mayo Clinic, 1949.",
+        related: ["j28"]
+      },
+      {
+        id: "j35", num: 35, founding: false, post1953: false, group: 5, level: "C",
+        dateLabel: "1952", start: makeDate(1952),
+        title: "Épidémie de poliomyélite aux États-Unis",
+        nature: "Crise sanitaire",
+        peoplePlaces: "États-Unis (près de 58 000 cas et plus de 3 000 décès en 1952)",
+        context: "Paradoxe hygiéniste : l'amélioration de l'assainissement retarde l'infection primaire au-delà de la petite enfance, augmentant les formes paralytiques.",
+        discovery: "Crise sanitaire majeure entraînant l'usage massif des poumons d'acier et accélérant le développement des vaccins Salk (inactivé, 1955) et Sabin (oral, 1961).",
+        impact: "Modèle de mobilisation scientifique et philanthropique (March of Dimes) conduisant à la quasi-éradication de la poliomyélite.",
+        limits: "Incident Cutter (1955) lors de la production industrielle initiale, conduisant au renforcement du contrôle réglementaire des vaccins.",
+        sources: "Archives des Centers for Disease Control (CDC) ; Oshinsky, 'Polio: An American Story' (2005).",
+        related: ["j13"]
+      },
+      {
+        id: "j36", num: 36, founding: false, post1953: false, group: 4, level: "B",
+        dateLabel: "1952", start: makeDate(1952),
+        title: "Chlorpromazine — Tournant psychopharmacologique",
+        nature: "Innovation thérapeutique",
+        peoplePlaces: "Henri Laborit, Jean Delay et Pierre Deniker (Hôpital Sainte-Anne, Paris)",
+        context: "Asiles psychiatriques surpeuplés ; traitements limités aux cures de Sakel, électrochocs et psychochirurgie.",
+        discovery: "Synthèse par Paul Charpentier (Rhône-Poulenc) et démonstration des propriétés neuroleptiques/antipsychotiques apaisant l'agitation et les délires sans narcose.",
+        impact: "Transforme la prise en charge des psychoses, favorise la désinstitutionnalisation psychiatrique et fonde la psychopharmacologie moderne.",
+        limits: "Effets secondaires neurologiques extrapyramidaux (dyskinésies) et risques d'usage uniquement sédatif.",
+        sources: "Delay, Deniker & Harl, 'Utilisation en thérapeutique psychiatrique d'une phénothiazine d'action centrale élective (4560 RP)', Annales Médico-Psychologiques, 1952.",
+        related: []
+      },
+      {
+        id: "j37", num: 37, founding: true, post1953: false, group: 3, level: "A",
+        dateLabel: "1953", start: makeDate(1953),
+        title: "Modèle de la double hélice de l'ADN",
+        nature: "Découverte scientifique fondamentale",
+        peoplePlaces: "James Watson, Francis Crick, Rosalind Franklin et Maurice Wilkins (Cambridge & King's College Londres)",
+        context: "Démonstration par Avery, MacLeod et McCarty (1944) que l'ADN est le support de l'hérédité ; clichés de diffraction aux rayons X (cliché 51 de R. Franklin).",
+        discovery: "Élémucidation de la structure tridimensionnelle en double hélice antiparallèle à appariement complémentaire des bases (A-T, G-C).",
+        impact: "Explique le mécanisme moléculaire de la réplication génétique et fonde la biologie moléculaire puis la médecine génomique.",
+        limits: "La contribution décisive des données cristallographiques de Rosalind Franklin fut longtemps sous-reconnue.",
+        sources: "Watson & Crick, 'Molecular Structure of Nucleic Acids', Nature, 25 avril 1953 ; Franklin & Gosling, Nature, 25 avril 1953.",
+        related: ["j25", "j40"]
+      },
+
+      // --- ÉVÉNEMENTS COMPLÉMENTAIRES APRÈS 1953 (DISTINGUÉS DU CORPUS INITIAL) ---
+      {
+        id: "j38", num: "C1", founding: false, post1953: true, group: 3, level: "B",
+        dateLabel: "1977", start: makeDate(1977),
+        title: "George Engel — Modèle biopsychosocial",
+        nature: "Modèle conceptuel intégratif",
+        peoplePlaces: "George L. Engel (Université de Rochester, États-Unis)",
+        context: "Critique des limites du modèle biomédical strictement réductionniste face aux maladies chroniques et aux troubles fonctionnels.",
+        discovery: "Proposition d'un cadre intégrant systématiquement les dimensions biologiques, psychologiques et sociales dans la compréhension et le soin.",
+        impact: "Influence durablement la formation médicale, la psychiatrie, la médecine générale et la prise en charge de la douleur chronique.",
+        limits: "Parfois critiqué pour son manque d'opérationnalisation hiérarchique précise dans les décisions cliniques aiguës.",
+        sources: "George L. Engel, 'The Need for a New Medical Model: A Challenge for Biomedicine', Science, 8 avril 1977.",
+        related: ["j01", "j36"]
+      },
+      {
+        id: "j39", num: "C2", founding: false, post1953: true, group: 5, level: "C",
+        dateLabel: "1981", start: makeDate(1981),
+        title: "Reconnaissance du VIH/sida",
+        nature: "Crise sanitaire pandémique",
+        peoplePlaces: "États-Unis, Afrique subsaharienne, Europe et monde entier (isolement du VIH en 1983 à l'Institut Pasteur)",
+        context: "Signalement en juin 1981 de cas groupés de pneumocystose et de sarcome de Kaposi chez de jeunes adultes.",
+        discovery: "Identification d'un nouveau syndrome d'immunodéficience acquise causé par un rétrovirus (VIH, isolé par Barré-Sinoussi, Montagnier et al. en 1983).",
+        impact: "Transforme l'immunologie, l'éthique de la recherche clinique (implication des associations de patients) et le développement des antirétroviraux (trithérapies en 1996).",
+        limits: "Stigmatisation initiale des populations touchées et persistance d'inégalités mondiales d'accès aux traitements.",
+        sources: "CDC, Morbidity and Mortality Weekly Report (MMWR), 5 juin 1981 ; Barré-Sinoussi et al., Science, 20 mai 1983.",
+        related: ["j37", "j41"]
+      },
+      {
+        id: "j40", num: "C3", founding: false, post1953: true, group: 4, level: "B",
+        dateLabel: "1990–2003", start: makeDate(1990), end: makeDate(2003),
+        title: "Projet Génome humain",
+        nature: "Programme scientifique & technologique",
+        peoplePlaces: "Consortium international public (NIH, Wellcome Trust, etc.) et Celera Genomics",
+        context: "Essor du séquençage de l'ADN (méthode Sanger) et de la bio-informatique.",
+        discovery: "Cartographie et séquençage de référence des quelque 3 milliards de paires de bases du génome humain.",
+        impact: "Accélère l'identification des bases génétiques des maladies rares, l'oncogénétique, la pharmacogénomique et la médecine de précision.",
+        limits: "La complexité des interactions gènes-environnement et de la régulation épigénétique tempère le déterminisme génétique initial.",
+        sources: "International Human Genome Sequencing Consortium, Nature, 15 février 2001 ; achèvement déclaré en avril 2003.",
+        related: ["j37", "j43"]
+      },
+      {
+        id: "j41", num: "C4", founding: false, post1953: true, group: 6, level: "B",
+        dateLabel: "Années 1990 (1992)", start: makeDate(1992),
+        title: "Formalisation de l'Evidence-Based Medicine (EBM)",
+        nature: "Transformation des pratiques & de la pédagogie",
+        peoplePlaces: "Gordon Guyatt, David Sackett (Université McMaster, Canada) et Collaboration Cochrane (1993)",
+        context: "Multiplication exponentielle des publications médicales et variabilité injustifiée des pratiques cliniques.",
+        discovery: "Formalisation de la médecine fondée sur les preuves : articulation explicite entre les meilleures données scientifiques issues des essais et méta-analyses, l'expertise clinique et les préférences du patient.",
+        impact: "Refonde l'enseignement médical, les recommandations de bonne pratique et les revues systématiques.",
+        limits: "Risque d'application bureaucratique rigide de protocoles (« médecine livre de cuisine ») et biais de publication industrielle.",
+        sources: "Evidence-Based Medicine Working Group, 'Evidence-Based Medicine: A New Approach to Teaching the Practice of Medicine', JAMA, 4 nov. 1992.",
+        related: ["j12", "j33"]
+      },
+      {
+        id: "j42", num: "C5", founding: false, post1953: true, group: 5, level: "C",
+        dateLabel: "2020 (2020–2023)", start: makeDate(2020), end: makeDate(2023),
+        title: "Pandémie de COVID-19",
+        nature: "Crise sanitaire pandémique",
+        peoplePlaces: "Monde entier (émergence fin 2019, déclaration de pandémie par l'OMS en mars 2020)",
+        context: "Interconnexion aérienne mondiale, urbanisation dense et surveillance génomique en temps réel.",
+        discovery: "Pandémie causée par le coronavirus SARS-CoV-2, entraînant des mesures sanitaires mondiales inédites et le déploiement accéléré de vaccins à ARN messager.",
+        impact: "Validation clinique à grande échelle des plateformes vaccinales à ARNm, essor de la télémédecine et du partage ouvert des données génomiques.",
+        limits: "Forte polarisation sociétale, infodémie, inégalités d'accès vaccinal et séquelles chroniques (COVID long).",
+        sources: "OMS, Déclaration d'urgence de santé publique de portée internationale (2020–2023) ; Polack et al., NEJM, 2020.",
+        related: ["j24", "j27", "j40"]
+      },
+      {
+        id: "j43", num: "C6", founding: false, post1953: true, group: 4, level: "B",
+        dateLabel: "2026 (État contemporain)", start: makeDate(2026),
+        title: "Médecine computationnelle et IA",
+        nature: "Transformation technologique progressive",
+        peoplePlaces: "Recherche biomédicale et systèmes de santé mondiaux",
+        context: "Convergence des données massives multimodales (génomique, imagerie, dossiers électroniques) et de l'apprentissage profond.",
+        discovery: "Intégration progressive d'outils d'aide au diagnostic (imagerie, anatomopathologie), de prédiction structurale des protéines (AlphaFold) et de conception moléculaire assistée.",
+        impact: "Accélération du criblage thérapeutique et de l'analyse d'images médicales, inscrite dans une évolution graduelle plutôt qu'une rupture unique.",
+        limits: "Enjeux majeurs de validation clinique prospective, de biais algorithmiques, d'explicabilité, de souveraineté des données et de responsabilité médicale.",
+        sources: "Topol, 'High-performance medicine: the convergence of human and artificial intelligence', Nature Medicine (2019) ; cadres réglementaires IA santé (OMS, UE, FDA, 2024–2026).",
+        related: ["j25", "j40", "j41"]
+      }
+    ];
+
+    // Connexions épistémologiques historiquement établies (non réduites à une simple succession)
+    const RELATIONS = [
+      { from: "j07", to: "j11", label: "Optique → Observation des microorganismes" },
+      { from: "j11", to: "j21", label: "Découverte des microbes → Théorie microbienne" },
+      { from: "j10", to: "j18", label: "Registres de mortalité → Cartographie épidémiologique" },
+      { from: "j15", to: "j18", label: "Pandémies de choléra → Investigation hydrique" },
+      { from: "j21", to: "j22", label: "Théorie microbienne → Antisepsie chirurgicale" },
+      { from: "j17", to: "j22", label: "Hygiène clinique → Prévention des infections" },
+      { from: "j29", to: "j31", label: "Découverte de la pénicilline → Production thérapeutique" },
+      { from: "j12", to: "j33", label: "Essai comparatif → Randomisation moderne" },
+      { from: "j33", to: "j41", label: "Essais randomisés → Formalisation EBM" },
+      { from: "j25", to: "j37", label: "Diffraction RX → Structure de l'ADN" },
+      { from: "j37", to: "j40", label: "Double hélice → Séquençage du génome" },
+      { from: "j40", to: "j43", label: "Génomique → Médecine computationnelle" }
+    ];
+
+    /**
+     * =========================================================================
+     * 2. INITIALISATION DE L'INTERFACE VIS-TIMELINE
+     * =========================================================================
+     */
+
+    const readingList = document.getElementById("chronology-list");
+    [...EVENTS_DATA].sort((a,b) => a.start - b.start).forEach(ev => {
+      const item = document.createElement("li");
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = ev.dateLabel + " — " + ev.title;
+      const description = document.createElement("p");
+      description.textContent = ev.discovery;
+      const source = document.createElement("p");
+      source.textContent = "Références : " + ev.sources;
+      details.append(summary, description, source);
+      item.append(details);
+      readingList.append(item);
+    });
+
+    function initTimeline() {
+    const groupsDataset = new vis.DataSet(
+      TRACKS.map(t => ({
+        id: t.id,
+        visible: t.visible,
+        content: `<div class="group-header">
+                    <span class="group-title" style="color:${t.color}">${t.label}</span>
+                    <span class="group-sub">${t.sub}</span>
+                  </div>`
+      }))
+    );
+
+    function formatItemContent(ev) {
+      const prefix = ev.founding ? `<span style="color:#C59B27;margin-right:3px;">★</span>` : (ev.level === "C" ? `<span style="margin-right:3px;">▲</span>` : "");
+      return `${prefix}<strong>${ev.dateLabel}</strong> — ${ev.title}`;
+    }
+
+    function getCategoryClass(groupId) {
+      if (groupId === 3) return "cat-theory";
+      if (groupId === 4) return "cat-tech";
+      if (groupId === 6) return "cat-inst";
+      return "";
+    }
+
+    const timelineItems = [
+      ...CONTEXT_BANDS,
+      ...EVENTS_DATA.map(ev => ({
+        id: ev.id,
+        group: ev.group,
+        content: formatItemContent(ev),
+        start: ev.start,
+        end: ev.end || undefined,
+        type: ev.end ? "range" : "box",
+        className: `level-${ev.level} ${getCategoryClass(ev.group)} ${ev.post1953 ? "post-1953" : ""}`,
+        title: `${ev.dateLabel} : ${ev.title} (${ev.nature})`
+      }))
+    ];
+
+    const itemsDataset = new vis.DataSet(timelineItems);
+
+    const container = document.getElementById("visualization");
+    const options = {
+      min: makeDate(-500),
+      max: makeDate(2035),
+      start: makeDate(-450),
+      end: makeDate(2030),
+      zoomMin: 1000 * 60 * 60 * 24 * 365 * 5,     // Zoom max : 5 ans
+      zoomMax: 1000 * 60 * 60 * 24 * 365 * 2600,  // Zoom min : 2600 ans
+      stack: true,
+      stackSubgroups: true,
+      margin: { item: { horizontal: 6, vertical: 5 }, axis: 6 },
+      orientation: { axis: "top" },
+      tooltip: { followMouse: true, overflowMethod: "cap" },
+      locale: "fr",
+      format: {
+        minorLabels: (date, scale) => {
+          const year = typeof date.year === "function" ? date.year() : new Date(date).getFullYear();
+          return scale === "year" || typeof date.format !== "function" ? (year < 0 ? Math.abs(year) + " av. J.-C." : String(year)) : date.format("MMM YYYY");
+        }
+      }
+    };
+
+    const timeline = new vis.Timeline(container, itemsDataset, groupsDataset, options);
+
+    /**
+     * =========================================================================
+     * 3. RENDU DES CONNEXIONS ÉPISTÉMOLOGIQUES (SVG OVERLAY)
+     * =========================================================================
+     */
+    let showRelations = true;
+
+    function drawRelations() {
+      const svg = document.getElementById("relations-svg");
+      svg.innerHTML = "";
+      if (!showRelations) return;
+
+      const wrapperRect = document.getElementById("timeline-wrapper").getBoundingClientRect();
+
+      // Définition de la pointe de flèche
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      defs.innerHTML = `
+        <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="rgba(100, 116, 139, 0.55)" />
+        </marker>
+      `;
+      svg.appendChild(defs);
+
+      RELATIONS.forEach(rel => {
+        const fromEl = timeline.itemSet.items[rel.from]?.dom?.box || timeline.itemSet.items[rel.from]?.dom?.point;
+        const toEl = timeline.itemSet.items[rel.to]?.dom?.box || timeline.itemSet.items[rel.to]?.dom?.point;
+
+        if (!fromEl || !toEl) return;
+
+        const r1 = fromEl.getBoundingClientRect();
+        const r2 = toEl.getBoundingClientRect();
+
+        // Ignorer si hors champ ou masqué
+        if (r1.width === 0 || r2.width === 0) return;
+
+        const x1 = r1.right - wrapperRect.left;
+        const y1 = r1.top + r1.height / 2 - wrapperRect.top;
+        const x2 = r2.left - wrapperRect.left;
+        const y2 = r2.top + r2.height / 2 - wrapperRect.top;
+
+        const axisWidth = document.querySelector(".vis-labelset")?.getBoundingClientRect().width || 0;
+        if (x2 < axisWidth || x1 > wrapperRect.width) return; // Ne pas dessiner sous la colonne des labels
+
+        const dx = Math.max(30, (x2 - x1) * 0.45);
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", "rgba(100, 116, 139, 0.42)");
+        path.setAttribute("stroke-width", "1.4");
+        path.setAttribute("stroke-dasharray", "3,2");
+        path.setAttribute("marker-end", "url(#arrow)");
+        svg.appendChild(path);
+      });
+    }
+
+    timeline.on("rangechange", () => requestAnimationFrame(drawRelations));
+    timeline.on("changed", () => requestAnimationFrame(drawRelations));
+    window.addEventListener("resize", () => requestAnimationFrame(drawRelations));
+
+    function toggleRelations() {
+      showRelations = !showRelations;
+      document.getElementById("btn-relations").textContent = `Liens historiques : ${showRelations ? "ON" : "OFF"}`;
+      drawRelations();
+    }
+
+    /**
+     * =========================================================================
+     * 4. CONTRÔLES DES PISTES & NAVIGATION TEMPORELLE
+     * =========================================================================
+     */
+    const togglesContainer = document.getElementById("track-toggles");
+    TRACKS.forEach(track => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", "true");
+      btn.className = "track-toggle";
+      btn.innerHTML = `<span class="color-dot" style="background:${track.color}"></span><span>${track.label}</span>`;
+      btn.onclick = () => {
+        track.visible = !track.visible;
+        btn.classList.toggle("muted", !track.visible);
+        btn.setAttribute("aria-pressed", String(track.visible));
+        groupsDataset.update({ id: track.id, visible: track.visible });
+        setTimeout(drawRelations, 100);
+      };
+      togglesContainer.appendChild(btn);
+    });
+
+    function zoomToRange(startYear, endYear, button) {
+      document.querySelectorAll(".toolbar .btn-group:first-child button").forEach(b => b.classList.remove("active"));
+      button.classList.add("active");
+      timeline.setWindow(makeDate(startYear), makeDate(endYear), { animation: { duration: 450, easingFunction: "easeInOutQuad" } });
+    }
+
+    function focusEvent(eventId) {
+      const ev = EVENTS_DATA.find(e => e.id === eventId);
+      if (!ev) return;
+      const year = ev.start.getFullYear();
+      const span = Math.max(15, Math.round(Math.abs(2026 - year) * 0.08));
+      timeline.setWindow(makeDate(year - span), makeDate(year + span), { animation: true });
+      timeline.setSelection(eventId);
+      openDrawer(ev);
+    }
+
+    /**
+     * =========================================================================
+     * 5. FICHE DOCUMENTAIRE DÉTAILLÉE AU CLIC
+     * =========================================================================
+     */
+    timeline.on("select", function(properties) {
+      if (properties.items.length === 0) return;
+      const selectedId = properties.items[0];
+      const ev = EVENTS_DATA.find(e => e.id === selectedId);
+      if (ev) openDrawer(ev);
+    });
+
+    function openDrawer(ev) {
+      const trackObj = TRACKS.find(t => t.id === ev.group);
+      document.getElementById("d-date").textContent = ev.dateLabel;
+      document.getElementById("d-track").textContent = trackObj ? trackObj.label : "";
+      document.getElementById("d-track").style.borderLeft = `3px solid ${trackObj.color}`;
+      document.getElementById("d-nature").textContent = ev.nature;
+      document.getElementById("d-title").textContent = `${ev.founding ? "★ " : ""}${ev.title}`;
+
+      const relatedHtml = ev.related && ev.related.length > 0
+        ? `<div class="related-chips">
+            ${ev.related.map(relId => {
+              const target = EVENTS_DATA.find(e => e.id === relId);
+              return target ? `<button class="related-chip" onclick="focusEvent('${target.id}')">${target.dateLabel} — ${target.title}</button>` : "";
+            }).join("")}
+           </div>`
+        : `<p style="color:var(--text-secondary);font-size:0.8rem;">Aucun lien direct sélectionné dans ce corpus.</p>`;
+
+      const corpusTag = ev.post1953
+        ? `<div style="font-size:0.75rem;color:#525E6C;background:#F1F5F9;padding:0.4rem 0.6rem;border-radius:4px;">Repère complémentaire post-1953 (prolongement contemporain jusqu'en 2026).</div>`
+        : `<div style="font-size:0.75rem;color:#525E6C;background:#F1F5F9;padding:0.4rem 0.6rem;border-radius:4px;">Jalon n° ${ev.num} / 37 du corpus historique initial.</div>`;
+
+      document.getElementById("drawer-content").innerHTML = `
+        ${corpusTag}
+        <div class="drawer-section">
+          <h4>Personnes et lieux associés</h4>
+          <p>${ev.peoplePlaces}</p>
+        </div>
+        <div class="drawer-section">
+          <h4>Contexte historique</h4>
+          <p>${ev.context}</p>
+        </div>
+        <div class="drawer-section">
+          <h4>Découverte ou transformation</h4>
+          <p>${ev.discovery}</p>
+        </div>
+        <div class="drawer-section">
+          <h4>Impact sur la compréhension médicale</h4>
+          <p>${ev.impact}</p>
+        </div>
+        <div class="drawer-section limits-box">
+          <h4>Limites, nuances et controverses</h4>
+          <p>${ev.limits}</p>
+        </div>
+        <div class="drawer-section">
+          <h4>Événements historiquement liés</h4>
+          ${relatedHtml}
+        </div>
+        <div class="drawer-section">
+          <h4>Sources bibliographiques vérifiables</h4>
+          <div class="source-text">${ev.sources}</div>
+        </div>
+      `;
+
+      const drawer = document.getElementById("detail-drawer");
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden", "false");
+    }
+
+    function closeDrawer() {
+      const drawer = document.getElementById("detail-drawer");
+      drawer.classList.remove("open");
+      drawer.setAttribute("aria-hidden", "true");
+      timeline.setSelection([]);
+    }
+
+    /**
+     * =========================================================================
+     * 6. PLEIN ÉCRAN ET EXPORTATION HAUTE RÉSOLUTION (PNG / PDF)
+     * =========================================================================
+     */
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+
+    async function exportPNG() {
+      const target = document.getElementById("timeline-wrapper");
+      const canvas = await html2canvas(target, { scale: 2, backgroundColor: "#F8F9FA" });
+      const link = document.createElement("a");
+      link.download = "histoire-de-la-medecine-frise.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    async function exportPDF() {
+      const target = document.getElementById("timeline-wrapper");
+      const canvas = await html2canvas(target, { scale: 2, backgroundColor: "#F8F9FA" });
+      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width, canvas.height] });
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save("histoire-de-la-medecine-frise.pdf");
+    }
+
+    // Premier rendu des connexions après stabilisation de vis-timeline
+    Object.assign(window, { timeline, zoomToRange, toggleRelations, toggleFullscreen,
+      exportPNG, exportPDF, closeDrawer, focusEvent });
+    if (!document.fullscreenEnabled) document.querySelector('[onclick="toggleFullscreen()"]').hidden = true;
+    if (!window.html2canvas) document.querySelector('[onclick="exportPNG()"]').disabled = true;
+    if (!window.html2canvas || !window.jspdf) document.querySelector('[onclick="exportPDF()"]').disabled = true;
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+    setTimeout(drawRelations, 350);
+    }
+
+    try {
+      initTimeline();
+    } catch (error) {
+      console.error(error);
+      document.querySelector(".toolbar").hidden = true;
+      document.querySelector(".sub-header").hidden = true;
+      document.getElementById("timeline-wrapper").hidden = true;
+      document.getElementById("timeline-status").textContent = "La frise interactive n’a pas pu se charger. Les jalons restent accessibles ci-dessous.";
+      document.getElementById("reading-list").open = true;
+    }
+  </script>
+</body>
+</html>
